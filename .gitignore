@@ -1,2 +1,11 @@
 .DS_Store
 node_modules/
+.svelte-kit/
+build/
+.env
+.env.*
+!.env.example
+
+# Netlify build output
+.netlify/
+build/
