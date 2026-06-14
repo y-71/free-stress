@@ -3,7 +3,9 @@
   publish = "build"
 
 [[headers]]
-  for = "/audio/*"
+  for = "/audio-v2/*"
   [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
+    # Not immutable: filenames are reused when the track is re-encoded, so we
+    # let clients revalidate (ETag) rather than freeze a stale copy for a year.
+    Cache-Control = "public, max-age=300, stale-while-revalidate=86400"
     Accept-Ranges = "bytes"

@@ -12,11 +12,11 @@
 
     if (Hls.isSupported()) {
       const hls = new Hls({ maxBufferLength: 30, maxMaxBufferLength: 60 });
-      hls.loadSource('/audio/playlist.m3u8');
+      hls.loadSource('/audio-v2/playlist.m3u8');
       hls.attachMedia(audio);
       hls.on(Hls.Events.MANIFEST_PARSED, () => audio.play());
     } else if (audio.canPlayType('application/vnd.apple.mpegurl')) {
-      audio.src = '/audio/playlist.m3u8';
+      audio.src = '/audio-v2/playlist.m3u8';
       audio.addEventListener('loadedmetadata', () => audio.play());
     }
   }
