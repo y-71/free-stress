@@ -1,36 +1,23 @@
 <script lang="ts">
   import Hls from 'hls.js';
 
-  let playing = $state(false);
-  let progress = $state(0);
+  let started = $state(false);
   let audio: HTMLAudioElement;
 
+  // One gesture to begin — browsers block audio autoplay, and the concept
+  // is that you then listen to the whole track with no controls.
   function start() {
-    playing = true;
+    if (started) return;
+    started = true;
 
     if (Hls.isSupported()) {
-      const hls = new Hls({
-        maxBufferLength: 30,
-        maxMaxBufferLength: 60,
-      });
+      const hls = new Hls({ maxBufferLength: 30, maxMaxBufferLength: 60 });
       hls.loadSource('/audio/playlist.m3u8');
       hls.attachMedia(audio);
       hls.on(Hls.Events.MANIFEST_PARSED, () => audio.play());
     } else if (audio.canPlayType('application/vnd.apple.mpegurl')) {
       audio.src = '/audio/playlist.m3u8';
       audio.addEventListener('loadedmetadata', () => audio.play());
-    }
-
-    audio.addEventListener('timeupdate', () => {
-      if (audio.duration) {
-        progress = (audio.currentTime / audio.duration) * 100;
-      }
-    });
-  }
-
-  function seek(e: MouseEvent) {
-    if (audio?.duration) {
-      audio.currentTime = (e.clientX / window.innerWidth) * audio.duration;
     }
   }
 </script>
@@ -40,129 +27,112 @@
 </svelte:head>
 
 <div class="screen">
-  <div class="dvd">FREE STRESS</div>
-
-  {#if !playing}
-    <button class="overlay" onclick={start}>
-      <div class="play-btn"></div>
-    </button>
-  {/if}
+  <!-- Dimi's graphic, swap static/free-stress.svg to change it.
+       The SVG is used as a mask so we can colour-cycle the shape itself. -->
+  <div class="dvd"></div>
 
   <audio bind:this={audio}></audio>
 
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="progress" onclick={seek} onkeydown={() => {}}>
-    <div class="progress-fill" style="width: {progress}%"></div>
-  </div>
+  {#if !started}
+    <button class="start" onclick={start} aria-label="Play">
+      <span class="play-icon"></span>
+      <span class="play-word">play</span>
+    </button>
+  {/if}
 </div>
 
 <style>
+  @font-face {
+    font-family: 'OCR-X';
+    src: url('/fonts/OCR-X-Light.otf') format('opentype');
+    font-weight: 300;
+    font-display: swap;
+  }
+
   :global(body) {
     margin: 0;
     padding: 0;
     background: #000;
     overflow: hidden;
-    cursor: none;
   }
 
   .screen {
     width: 100vw;
     height: 100vh;
     position: relative;
+    cursor: none;
   }
 
   .dvd {
-    --size: 200px;
-    width: var(--size);
-    height: var(--size);
+    /* Box is sized to the artwork's exact aspect ratio (2.388:1) so its
+       edges are the logo's edges — that's what makes the corner-hits land. */
+    --w: min(420px, 70vw);
+    --h: calc(var(--w) / 2.3881);
+    width: var(--w);
+    height: var(--h);
     position: absolute;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: 'Courier New', monospace;
-    font-size: 1.4rem;
-    font-weight: bold;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: #fff;
-    border: 2px solid #fff;
+    /* The graphic shape, cut out of a colour-cycling fill. */
+    -webkit-mask: url(/free-stress.svg) center / contain no-repeat;
+    mask: url(/free-stress.svg) center / contain no-repeat;
     animation:
       dvd-x 7.3s linear infinite alternate,
       dvd-y 11.7s linear infinite alternate,
-      dvd-hue 23s linear infinite;
+      dvd-hue 5s linear infinite;
   }
 
   @keyframes dvd-x {
     0%   { left: 0; }
-    100% { left: calc(100vw - var(--size)); }
+    100% { left: calc(100vw - var(--w)); }
   }
 
   @keyframes dvd-y {
     0%   { top: 0; }
-    100% { top: calc(100vh - var(--size)); }
+    100% { top: calc(100vh - var(--h)); }
   }
 
   @keyframes dvd-hue {
-    0%   { color: #ff0040; border-color: #ff0040; }
-    25%  { color: #00ff88; border-color: #00ff88; }
-    50%  { color: #4080ff; border-color: #4080ff; }
-    75%  { color: #ff00ff; border-color: #ff00ff; }
-    100% { color: #ff0040; border-color: #ff0040; }
+    0%   { background-color: #ff0040; color: #ff0040; }
+    25%  { background-color: #00ff88; color: #00ff88; }
+    50%  { background-color: #4080ff; color: #4080ff; }
+    75%  { background-color: #ff00ff; color: #ff00ff; }
+    100% { background-color: #ff0040; color: #ff0040; }
   }
 
-  .overlay {
+  /* Single start gesture — full-screen, fades itself out on click. */
+  .start {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.8);
-    display: flex;
-    align-items: center;
-    justify-content: center;
     z-index: 100;
-    cursor: pointer;
-    border: none;
-    transition: opacity 0.5s;
-  }
-
-  .play-btn {
-    width: 80px;
-    height: 80px;
-    border: 2px solid #fff;
-    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
+    border: none;
+    background: rgba(0, 0, 0, 0.85);
+    cursor: pointer;
+    gap: 16px;
+    color: #fff;
     transition: transform 0.2s;
   }
 
-  .play-btn:hover {
-    transform: scale(1.1);
+  .start:hover {
+    transform: scale(1.08);
   }
 
-  .play-btn::after {
-    content: '';
-    display: block;
+  /* White play triangle before the word. */
+  .play-icon {
     width: 0;
     height: 0;
     border-style: solid;
-    border-width: 15px 0 15px 28px;
+    border-width: 12px 0 12px 20px;
     border-color: transparent transparent transparent #fff;
-    margin-left: 5px;
   }
 
-  .progress {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 3px;
-    background: rgba(255, 255, 255, 0.1);
-    z-index: 50;
-    cursor: pointer;
-  }
-
-  .progress-fill {
-    height: 100%;
-    background: #fff;
-    transition: width 0.3s linear;
+  /* "play" in Dimi's font, plain white. */
+  .play-word {
+    font-family: 'OCR-X', 'Courier New', monospace;
+    font-size: 2.4rem;
+    letter-spacing: 0.25em;
+    text-transform: lowercase;
+    color: #fff;
   }
 </style>
